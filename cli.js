@@ -23,10 +23,10 @@ program
 program
   .command('announce <dns>')
   .description('Announces an hostname on the network')
-  .action(function(hostname, program){
+  .action(function(hostname){
     var opts = {
       port: 9090,
-      hostname:'0.0.0.0'
+      hostname: '0.0.0.0'
     };
 
     if (program.parent.verbose) {
@@ -38,11 +38,11 @@ program
     }
 
     var solver = new DHTSolver(opts);
-    console.log('Starting DHT on ' + solver.getDhtAddress());
+    console.log('Starting DHT on ' + solver.getDhtAddress() );
     solver.start(function(){
       console.log('DHT ready');
-      if( solver.announce(hostname) ){
-        console.log('Announcing ' + hostname)
+      if (solver.announce(hostname) ){
+        console.log('Announcing ' + hostname);
       } else {
         console.log('Did not announce ' + hostname);
       }
@@ -51,10 +51,10 @@ program
 
 program.command('resolve <dns>')
   .description('Resolves an hostname on the network')
-  .action(function(hostname, program){
+  .action(function(hostname){
     var opts = {
       port: 9091,
-      hostname:'0.0.0.0'
+      hostname: '0.0.0.0'
     };
 
     if (program.parent.verbose) {
@@ -66,7 +66,7 @@ program.command('resolve <dns>')
     }
 
     var solver = new DHTSolver(opts);
-    console.log('Starting DHT on ' + solver.getDhtAddress());
+    console.log('Starting DHT on ' + solver.getDhtAddress() );
     solver.start(function(){
       console.log('DHT ready');
       console.log('resolving');

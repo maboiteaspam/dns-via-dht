@@ -5,14 +5,18 @@ var parseTorrent = require('parse-torrent');
 
 var isValidDns = function(dns){
   var parsedDomain = parse(dns);
-  return ! parsedDomain.tokenized.length < 2;
+  return !parsedDomain.tokenized.length < 2;
 };
 
 
 var DHTSolver = function(opts){
 
-  if(!opts.port) opts.port = 9090;
-  if(!opts.hostname) opts.hostname = '127.0.0.1';
+  if (!opts.port) {
+    opts.port = 9090;
+  }
+  if (!opts.hostname) {
+    opts.hostname = '127.0.0.1';
+  }
 
   var DHTY = require('bootstrap-dht-yourself');
 
@@ -25,15 +29,19 @@ var DHTSolver = function(opts){
   this.announce = function(newDns){
     var announcedDns = this.announcedDns;
     var dhTable = this.dhTable;
-    if ( isValidDns(newDns) && !announcedDns[newDns] ) {
+    if (isValidDns(newDns) && !announcedDns[newDns]) {
       announcedDns[newDns] = {
-        ip:'127.0.0.1',
-        dns:newDns
+        ip: '127.0.0.1',
+        dns: newDns
       };
-      createTorrent(new Buffer(newDns), {name:newDns}, function (err, torrent) {
-        torrent = parseTorrent(torrent);
-        dhTable.announce(torrent.infoHash, opts.port);
-      });
+      createTorrent(new Buffer(newDns), {name: newDns},
+        function (err, torrent) {
+          if (err) {
+            console.log(err);
+          }
+          torrent = parseTorrent(torrent);
+          dhTable.announce(torrent.infoHash, opts.port);
+        });
       return true;
     }
     return false;
@@ -44,7 +52,10 @@ var DHTSolver = function(opts){
     var dhTable = this.dhTable;
     Object.keys(announcedDns).forEach(function(dns){
       // console.log('announcing ' + dns);
-      createTorrent(new Buffer(dns), {name:dns}, function (err, torrent) {
+      createTorrent(new Buffer(dns), {name: dns}, function (err, torrent) {
+        if (err) {
+          console.log(err);
+        }
         torrent = parseTorrent(torrent);
         dhTable.announce(torrent.infoHash, opts.port);
       });
@@ -57,7 +68,7 @@ var DHTSolver = function(opts){
     var pendingDns = this.pendingDns;
     var pendingLookup = this.pendingLookup;
     var announcedDns = this.announcedDns;
-    if ( isValidDns(dnsToSolve) ) {
+    if (isValidDns(dnsToSolve) ) {
       if (pendingDns[dnsToSolve]) {
         then('already announced', false);
       } else if (knownDns[dnsToSolve]) {
@@ -69,8 +80,11 @@ var DHTSolver = function(opts){
           question: dnsToSolve,
           then: then
         };
-        createTorrent(new Buffer(dnsToSolve), {name:dnsToSolve},
+        createTorrent(new Buffer(dnsToSolve), {name: dnsToSolve},
           function (err, torrent) {
+            if (err) {
+              console.log(err);
+            }
             torrent = parseTorrent(torrent);
             pendingLookup[torrent.infoHash] = {
               infoHash: torrent.infoHash,
@@ -99,18 +113,18 @@ var DHTSolver = function(opts){
       });
       dhTable.on('peer', function (addr, hash, from) {
         console.log(dhtAddress + ' peer ');
-        console.log(addr, from)
+        console.log(addr, from);
       });
       dhTable.on('error', function (err) {
         console.log(dhtAddress + ' error ');
-        console.log(err)
+        console.log(err);
       });
-      dhTable.on('warning', function (err) {
+      dhTable.on('warning', function () {
         console.log(dhtAddress + ' warning ');
       });
       dhTable.on('announce', function (addr, hash, from) {
         console.log(dhtAddress + ' announce ');
-        console.log(addr, hash, from)
+        console.log(addr, hash, from);
       });
       dhTable.on('peer', function (addr, infoHash, from) {
         var transaction = pendingLookup[infoHash];
@@ -118,8 +132,8 @@ var DHTSolver = function(opts){
           var name = transaction.question;
           if (pendingDns[name]) {
             knownDns[name] = {
-              ip:from.split(':')[0],
-              dns:name
+              ip: from.split(':')[0],
+              dns: name
             };
             pendingDns[name].then(null, knownDns[name]);
             delete pendingDns[infoHash];
@@ -146,17 +160,17 @@ var DHTSolver = function(opts){
     dhTable.nodes.toArray().forEach(function(node) {
       nodes.push({
         addr: node.addr,
-        distance: node.distance===undefined?-1:node.distance
-      })
+        distance: node.distance === undefined ? -1 : node.distance
+      });
     });
 
     return {
-      dhtAddress:this.getDhtAddress(),
+      dhtAddress: this.getDhtAddress(),
       isReady: dhTable.ready,
       nodes: nodes,
       nodesCount: nodes.length,
       peersCount: Object.keys(dhTable.peers).length,
-      announcesCount:Object.keys(dhTable.tables).length
+      announcesCount: Object.keys(dhTable.tables).length
     };
   };
 
