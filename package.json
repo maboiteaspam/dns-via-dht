@@ -1,0 +1,26 @@
+{
+  "name": "dht-dns-solver",
+  "version": "1.0.0",
+  "description": "dns solver via dht",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maboiteaspam/dht-dns-solver"
+  },
+  "author": "maboiteaspam",
+  "license": "WTFPL",
+  "bugs": {
+    "url": "https://github.com/maboiteaspam/dht-dns-solver/issues"
+  },
+  "homepage": "https://github.com/maboiteaspam/dht-dns-solver",
+  "dependencies": {
+    "bittorrent-dht": "^2.6.4",
+    "commander": "^2.6.0",
+    "create-torrent": "^3.8.0",
+    "domain-name-parser": "0.0.5",
+    "parse-torrent": "^4.0.0"
+  }
+}
