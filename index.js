@@ -2,6 +2,7 @@
 var parse = require('domain-name-parser');
 var createTorrent = require('create-torrent');
 var parseTorrent = require('parse-torrent');
+var bencode = require('bencode');
 
 var isValidDns = function(dns){
   var parsedDomain = parse(dns);
@@ -24,6 +25,7 @@ var DHTSolver = function(opts){
   this.knownDns = {};
   this.pendingDns = {};
   this.pendingLookup = {};
+  this.pendingChallenges = {};
   this.dhTable = null;
 
   this.announce = function(newDns){
@@ -70,7 +72,7 @@ var DHTSolver = function(opts){
     var announcedDns = this.announcedDns;
     if (isValidDns(dnsToSolve) ) {
       if (pendingDns[dnsToSolve]) {
-        then('already announced', false);
+        pendingDns[dnsToSolve].push(then);
       } else if (knownDns[dnsToSolve]) {
         then(null, knownDns[dnsToSolve]);
       } else if (announcedDns[dnsToSolve]) {
@@ -78,7 +80,7 @@ var DHTSolver = function(opts){
       } else {
         pendingDns[dnsToSolve] = {
           question: dnsToSolve,
-          then: then
+          then: [then]
         };
         createTorrent(new Buffer(dnsToSolve), {name: dnsToSolve},
           function (err, torrent) {
@@ -87,7 +89,6 @@ var DHTSolver = function(opts){
             }
             torrent = parseTorrent(torrent);
             pendingLookup[torrent.infoHash] = {
-              infoHash: torrent.infoHash,
               question: dnsToSolve
             };
             dhTable.lookup(torrent.infoHash);
@@ -99,52 +100,103 @@ var DHTSolver = function(opts){
   };
 
   this.start = function(then){
-    var knownDns = this.knownDns;
     var pendingDns = this.pendingDns;
     var pendingLookup = this.pendingLookup;
+    var pendingChallenges = this.pendingChallenges;
+    var knownDns = this.knownDns;
 
-    var dhtAddress = this.getDhtAddress();
     this.dhTable = DHTY(opts, function(dhTable) {
-      dhTable.listen(opts.port, opts.hostname, function () {
-        console.log(dhtAddress + ' listening ');
-      });
-      dhTable.on('ready', function () {
-        console.log(dhtAddress + ' ready ');
-      });
-      dhTable.on('peer', function (addr, hash, from) {
-        console.log(dhtAddress + ' peer ');
-        console.log(addr, from);
-      });
-      dhTable.on('error', function (err) {
-        console.log(dhtAddress + ' error ');
-        console.log(err);
-      });
-      dhTable.on('warning', function () {
-        console.log(dhtAddress + ' warning ');
-      });
-      dhTable.on('announce', function (addr, hash, from) {
-        console.log(dhtAddress + ' announce ');
-        console.log(addr, hash, from);
-      });
       dhTable.on('peer', function (addr, infoHash, from) {
         var transaction = pendingLookup[infoHash];
         if (transaction) {
           var name = transaction.question;
           if (pendingDns[name]) {
-            knownDns[name] = {
-              ip: from.split(':')[0],
-              dns: name
+            var transactionId = dhTable._getTransactionId(addr, function(){});
+            var message = {
+              "t":transactionIdToBuffer(transactionId),
+              "y":"q",
+              "q":"auth",
+              "a":{"c":"g"}
             };
-            pendingDns[name].then(null, knownDns[name]);
-            delete pendingDns[infoHash];
-            delete pendingLookup[infoHash];
+            pendingChallenges[addr] = message;
+
+            dhTable._send(addr, message);
+            pendingChallenges[addr].question = name;
+            pendingChallenges[addr].infoHash = infoHash;
+            console.log('auth ' + addr)
           }
         }
       });
-      if (then) {
-        then();
-      }
+      dhTable.socket.on('message', function (data, rinfo){
+        var addr = rinfo.address + ':' + rinfo.port;
+        var message;
+        try {
+          message = bencode.decode(data);
+          if (message) {
+            var type = message.y && message.y.toString();
+            if (type === 'q') {
+              var question = message.q && message.q.toString();
+              console.log(type + ':' + question)
+              if (question === 'auth') {
+                var challenge = message.a
+                  && message.a.c
+                  && message.a.c.toString();
+                // do something to cipher/un cipher the challenge here
+
+                console.log('message ' + type + ' '+question);
+                console.log('challenge ' + challenge);
+                // then send reply
+                var transactionId = dhTable._getTransactionId(addr);
+                var response = {
+                  "t":transactionIdToBuffer(transactionId),
+                  "y":"r",
+                  "q":"auth",
+                  "r":{"c":challenge/*to improve*/}
+                };
+                dhTable._send(addr, response);
+              }
+
+            } else if (type === 'r' && pendingChallenges[addr]) {
+              var challenge = message.r
+                && message.r.c
+                && message.r.c.toString();
+              // do something to cipher/un cipher the challenge here
+
+              console.log('message ' + type );
+              console.log('challenge ' + challenge);
+
+              // check it matches
+              if (challenge === 'g' ) {
+                var name = pendingChallenges[addr].question;
+                var infoHash = pendingChallenges[addr].infoHash;
+                var then = pendingDns[name].then;
+
+                delete pendingChallenges[addr];
+                delete pendingDns[name];
+                delete pendingLookup[infoHash];
+
+                knownDns[name] = {
+                  ip: addr.split(':')[0],
+                  dns: name
+                };
+                then.forEach(function(cb){
+                  cb(null, knownDns[name]);
+                });
+              }
+            }
+          }
+        } catch (err) {
+          console.log(err);
+        }
+
+      });
+      process.nextTick(function(){
+        if (then) {
+          then();
+        }
+      })
     });
+    this.dhTable.listen(opts.port, opts.hostname);
   };
 
   this.stop = function(then){
@@ -176,4 +228,13 @@ var DHTSolver = function(opts){
 
 };
 
+function transactionIdToBuffer (transactionId) {
+  if (Buffer.isBuffer(transactionId)) {
+    return transactionId
+  } else {
+    var buf = new Buffer(2)
+    buf.writeUInt16BE(transactionId, 0)
+    return buf
+  }
+}
 module.exports = DHTSolver;

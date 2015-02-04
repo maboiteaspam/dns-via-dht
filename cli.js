@@ -18,23 +18,23 @@ program
 
 program
   .option('-b, --bootstrap <nodes>',
-  'ip:port address of the bootstrap nodes');
+  'ip:port address of the bootstrap nodes, or, \'diy\' to scan the network for the BT dht');
 
 program
   .command('announce <dns>')
-  .description('Announces an hostname on the network')
+  .description('Announces a DNS on the network')
   .action(function(hostname){
     var opts = {
       port: 9090,
       hostname: '0.0.0.0'
     };
 
-    if (program.parent.verbose) {
+    if (program.verbose) {
       opts.debug = '*';
     }
 
-    if (program.parent.bootstrap) {
-      opts.bootstrap = program.parent.bootstrap;
+    if (program.bootstrap) {
+      opts.bootstrap = program.bootstrap;
     }
 
     var solver = new DHTSolver(opts);
@@ -50,19 +50,19 @@ program
   });
 
 program.command('resolve <dns>')
-  .description('Resolves an hostname on the network')
+  .description('Resolves a DNS on the network')
   .action(function(hostname){
     var opts = {
       port: 9091,
       hostname: '0.0.0.0'
     };
 
-    if (program.parent.verbose) {
+    if (program.verbose) {
       opts.debug = '*';
     }
 
-    if (program.parent.bootstrap) {
-      opts.bootstrap = program.parent.bootstrap;
+    if (program.bootstrap) {
+      opts.bootstrap = program.bootstrap;
     }
 
     var solver = new DHTSolver(opts);
@@ -73,6 +73,8 @@ program.command('resolve <dns>')
       solver.resolve(hostname, function(err, response){
         console.log(err);
         console.log(response);
+        console.log('Resolve succeed !');
+        console.log(response.dns + ' = > ' + response.ip);
       });
     });
   });
