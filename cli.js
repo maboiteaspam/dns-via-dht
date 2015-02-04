@@ -34,7 +34,7 @@ program
 
 program
   .command('announce <dns>')
-  .description('Announces a DNS on the network')
+  .description('Announce a DNS on the network')
   .action(function(dns){
     var opts = {
       port: parseInt(program.port) || 9090,
@@ -66,7 +66,7 @@ program
   });
 
 program.command('resolve <dns>')
-  .description('Resolves a DNS on the network')
+  .description('Resolve a DNS on the network')
   .action(function(dns){
     var opts = {
       port: parseInt(program.port) || 9091,

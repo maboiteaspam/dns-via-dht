@@ -57,15 +57,19 @@ The process can be repeated as many times as you want to grow the DHT.
 
   Commands:
 
-    announce <dns>  Announces an hostname on the network
-    resolve <dns>   Resolves an hostname on the network
+    announce <dns>  Announce an hostname on the network
+    resolve <dns>   Resolve an hostname on the network
 
   Options:
 
-    -h, --help               output usage information
-    -V, --version            output the version number
-    -v, --verbose            enable verbosity
-    -b, --bootstrap <nodes>  ip:port address of the bootstrap nodes, or, 'diy' to scan the network for the BT dht
+    -h, --help                 output usage information
+    -V, --version              output the version number
+    -v, --verbose              enable verbosity
+    -p, --port <port>          port on which the DHT listens
+    -h, --hostname <hostname>  hostname on which DHT listens
+    -K, --knodes <K>           K nodes to find before he DHT is ready
+    -b, --bootstrap <nodes>    ip:port address of the bootstrap nodes, or, 'diy' to scan the network for the BT DHT
+
 ```
 
 # TODO
