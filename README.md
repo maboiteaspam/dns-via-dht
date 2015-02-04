@@ -1,12 +1,14 @@
 # DHT DNS solver
 
-Provides an API to resolve a domain name via DHT table.
+Provides an API to announce and resolve a domain name via DHT table.
 
 Still a work in progress : )
 
 # Install
 
+```
 npm i maboiteaspam/dht-dns-solver
+```
 
 # Run
 
@@ -36,15 +38,15 @@ We ll announce a domain on a DHT without any friendly node.
 node cli.js announce 'mydomain.com' -b '' -p 9090 -h '127.0.0.1' -K 1
 ```
 
-We ll now resolve the domain, this time we set announcer as our bootstrap nodes.
+We ll now resolve the domain, this time we set the announcer as our bootstrap node.
 
 ```
 node cli.js resolve 'mydomain.com' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9091 -K 1
 ```
 
-In both case we reduce K nodes for faster testing.
+In both case we reduce K nodes for fasten the testing.
 
-The process can repeated as many times as you want to grow the DHT.
+The process can be repeated as many times as you want to grow the DHT.
 
 
 # Usage
