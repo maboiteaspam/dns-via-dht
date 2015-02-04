@@ -106,6 +106,7 @@ var DHTSolver = function(opts){
     var knownDns = this.knownDns;
 
     this.dhTable = DHTY(opts, function(dhTable) {
+
       dhTable.on('peer', function (addr, infoHash, from) {
         var transaction = pendingLookup[infoHash];
         if (transaction) {
@@ -127,6 +128,8 @@ var DHTSolver = function(opts){
           }
         }
       });
+
+
       dhTable.socket.on('message', function (data, rinfo){
         var addr = rinfo.address + ':' + rinfo.port;
         var message;
@@ -190,11 +193,13 @@ var DHTSolver = function(opts){
         }
 
       });
+
       process.nextTick(function(){
         if (then) {
           then();
         }
-      })
+      });
+
     });
     this.dhTable.listen(opts.port, opts.hostname);
   };

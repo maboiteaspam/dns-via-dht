@@ -17,20 +17,36 @@ program
   'enable verbosity');
 
 program
+  .option('-p, --port <port>',
+  'port on which the DHT listens');
+
+program
+  .option('-h, --hostname <hostname>',
+  'hostname on which DHT listens');
+
+program
+  .option('-K, --knodes <K>',
+  'K nodes to find before he DHT is ready');
+
+program
   .option('-b, --bootstrap <nodes>',
-  'ip:port address of the bootstrap nodes, or, \'diy\' to scan the network for the BT dht');
+  'ip:port address of the bootstrap nodes, or, \'diy\' to scan the network for the BT DHT');
 
 program
   .command('announce <dns>')
   .description('Announces a DNS on the network')
-  .action(function(hostname){
+  .action(function(dns){
     var opts = {
-      port: 9090,
-      hostname: '0.0.0.0'
+      port: parseInt(program.port) || 9090,
+      hostname: program.hostname || '0.0.0.0'
     };
 
     if (program.verbose) {
       opts.debug = '*';
+    }
+
+    if (program.K) {
+      opts.K = program.K;
     }
 
     if (program.bootstrap) {
@@ -41,24 +57,28 @@ program
     console.log('Starting DHT on ' + solver.getDhtAddress() );
     solver.start(function(){
       console.log('DHT ready');
-      if (solver.announce(hostname) ){
-        console.log('Announcing ' + hostname);
+      if (solver.announce(dns) ){
+        console.log('Announcing ' + dns);
       } else {
-        console.log('Did not announce ' + hostname);
+        console.log('Did not announce ' + dns);
       }
     });
   });
 
 program.command('resolve <dns>')
   .description('Resolves a DNS on the network')
-  .action(function(hostname){
+  .action(function(dns){
     var opts = {
-      port: 9091,
-      hostname: '0.0.0.0'
+      port: parseInt(program.port) || 9091,
+      hostname: program.hostname || '0.0.0.0'
     };
 
     if (program.verbose) {
       opts.debug = '*';
+    }
+
+    if (program.K) {
+      opts.K = program.K;
     }
 
     if (program.bootstrap) {
@@ -70,7 +90,7 @@ program.command('resolve <dns>')
     solver.start(function(){
       console.log('DHT ready');
       console.log('resolving');
-      solver.resolve(hostname, function(err, response){
+      solver.resolve(dns, function(err, response){
         console.log(err);
         console.log(response);
         console.log('Resolve succeed !');

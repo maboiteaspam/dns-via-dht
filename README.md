@@ -28,6 +28,25 @@ Something that happens to me, i workaround this by doing a dirty network scan
 node cli.js resolve 'mydomain.com' -b diy
 ```
 
+#### Test locally
+
+We ll announce a domain on a DHT without any friendly node.
+
+```
+node cli.js announce 'mydomain.com' -b '' -p 9090 -h '127.0.0.1' -K 1
+```
+
+We ll now resolve the domain, this time we set announcer as our bootstrap nodes.
+
+```
+node cli.js resolve 'mydomain.com' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9091 -K 1
+```
+
+In both case we reduce K nodes for faster testing.
+
+The process can repeated as many times as you want to grow the DHT.
+
+
 # Usage
 
 ```
