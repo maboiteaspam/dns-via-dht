@@ -1,4 +1,4 @@
-# DHT DNS solver
+# DNS via DHT
 
 Provides an API to announce and resolve a domain name via DHT.
 
@@ -7,19 +7,19 @@ Still a work in progress : )
 # Install
 
 ```zsh
-npm i maboiteaspam/dht-dns-solver
+npm i maboiteaspam/dns-via-dht -g
 ```
 
 # Run
 
 #### Terminal 1
 ```zsh
-node cli.js announce 'mydomain.com'
+dns-via-dht announce 'mydomain.com'
 ```
 
 #### Terminal 2
 ```zsh
-node cli.js resolve 'mydomain.com'
+dns-via-dht resolve 'mydomain.com'
 ```
 
 #### Unavailable bootstrap nodes
@@ -27,32 +27,8 @@ node cli.js resolve 'mydomain.com'
 Something that happens to me, i workaround this by doing a dirty network scan
 
 ```zsh
-node cli.js resolve 'mydomain.com' -b 'diy'
+dns-via-dht resolve 'mydomain.com' -b 'diy'
 ```
-
-#### Test locally
-
-Let's start by creating an empty DHT to serve as a bootstrap nodes to our network.
-
-```zsh
-node cli.js dhtstart -b '' -p 9090 -h '127.0.0.1' -K 1
-```
-
-Let s connect that empty DHT and announce our domain name.
-
-```zsh
-node cli.js announce 'mydomain.com' -b '' -p 9091 -h '127.0.0.1' -K 1
-```
-
-Let s now resolve the domain name on the previous DHT.
-
-```zsh
-node cli.js resolve 'mydomain.com' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9092 -K 1
-```
-
-In all cases we reduce K nodes for fasten the testing.
-
-The process can be repeated as many times as you want to grow the DHT.
 
 
 # Usage
@@ -78,6 +54,30 @@ The process can be repeated as many times as you want to grow the DHT.
     -b, --bootstrap <nodes>    ip:port address of the bootstrap nodes, or, 'diy' to scan the network for the BT DHT
 ```
 
+#### Test locally
+
+Let's start by creating an origin DHT to serve as a bootstrap node to our network.
+
+```zsh
+dns-via-dht dhtstart -b '' -p 9090 -h '127.0.0.1' -K 1
+```
+
+Let s connect that origin DHT and announce our domain name.
+
+```zsh
+dns-via-dht announce 'mydomain.com' -b '127.0.0.1:9090' -p 9091 -h '127.0.0.1' -K 1
+```
+
+Let s now resolve the domain name via the origin DHT.
+
+```zsh
+dns-via-dht resolve 'mydomain.com' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9092 -K 1
+```
+
+In all cases we reduce K nodes to fasten the testing.
+
+The process can be repeated as many times as you want to grow the DHT.
+
 # API
 
 dns-dht-solver is a module that exposes a DHTSolver constructor.
@@ -92,7 +92,7 @@ dns-dht-solver is a module that exposes a DHTSolver constructor.
     });
 ```
 
-It provides you methods such start(then), resolve(dns,then), announce(dns).
+It provides methods such start(then), resolve(dns,then), announce(dns).
 
 ###### start(then)
 
