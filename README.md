@@ -84,7 +84,7 @@ The process can be repeated as many times as you want to grow the DHT.
 
 dns-dht-solver is a module that exposes a DHTSolver constructor.
 
-```
+```js
     var DHTSolver = require('dns-dht-solver');
     var solver = new DHTSolver(opts || {
       port: DHT port number
@@ -98,7 +98,7 @@ It provides you methods such start(then), resolve(dns,then), announce(dns).
 
 ###### start(then)
 
-```
+```js
     solver.start(function(){
       console.log('DHT ready');
     });
@@ -106,7 +106,7 @@ It provides you methods such start(then), resolve(dns,then), announce(dns).
 
 ###### resolve(dns, then)
 
-```
+```js
     solver.start(function(){
       solver.resolve(dns, function(err, response){
         console.log(err);
@@ -117,7 +117,7 @@ It provides you methods such start(then), resolve(dns,then), announce(dns).
 
 ###### announce(dns)
 
-```
+```js
     solver.start(function(){
       if (solver.announce(dns) ){
         console.log('Announcing ' + dns);
