@@ -6,19 +6,19 @@ Still a work in progress : )
 
 # Install
 
-```
+```sh
 npm i maboiteaspam/dht-dns-solver
 ```
 
 # Run
 
 #### Terminal 1
-```
+```sh
 node cli.js announce 'mydomain.com'
 ```
 
 #### Terminal 2
-```
+```sh
 node cli.js resolve 'mydomain.com'
 ```
 
@@ -26,7 +26,7 @@ node cli.js resolve 'mydomain.com'
 
 Something that happens to me, i workaround this by doing a dirty network scan
 
-```
+```sh
 node cli.js resolve 'mydomain.com' -b diy
 ```
 
@@ -34,19 +34,19 @@ node cli.js resolve 'mydomain.com' -b diy
 
 Let's start by creating an empty DHT to serve as a bootstrap nodes to our network.
 
-```
+```sh
 node cli.js dhtstart -b '' -p 9090 -h '127.0.0.1' -K 1
 ```
 
 Let s connect that empty DHT and announce our domain name.
 
-```
+```sh
 node cli.js announce 'mydomain.com' -b '' -p 9091 -h '127.0.0.1' -K 1
 ```
 
 Let s now resolve the domain name on the previous DHT.
 
-```
+```sh
 node cli.js resolve 'mydomain.com' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9092 -K 1
 ```
 
@@ -57,8 +57,7 @@ The process can be repeated as many times as you want to grow the DHT.
 
 # Usage
 
-```
-
+```sh
   Usage: cli [options] [command]
 
 
@@ -77,7 +76,6 @@ The process can be repeated as many times as you want to grow the DHT.
     -h, --hostname <hostname>  hostname on which DHT listens
     -K, --knodes <K>           K nodes to find before he DHT is ready
     -b, --bootstrap <nodes>    ip:port address of the bootstrap nodes, or, 'diy' to scan the network for the BT DHT
-
 ```
 
 # API
@@ -87,10 +85,10 @@ dns-dht-solver is a module that exposes a DHTSolver constructor.
 ```js
     var DHTSolver = require('dns-dht-solver');
     var solver = new DHTSolver(opts || {
-      port: DHT port number
-      hostname: DHT hostname
-      K: K nodes before DHT gets ready
-      bootstrap: bootstrap method : 'diy', false, [ip/hostname,...]
+      port: 9090, // DHT port number
+      hostname: '0.0.0.0', // DHT hostname
+      K: 20, // K nodes before DHT gets ready
+      bootstrap: false // bootstrap method : 'diy', false, [ip/hostname,...]
     });
 ```
 
