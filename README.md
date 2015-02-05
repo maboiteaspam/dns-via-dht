@@ -142,17 +142,19 @@ It provides you methods such start(then), resolve(dns,then), announce(dns).
 
 
 
-# Projects i have dig before i came up with that
+### Projects i digged before i came up with that
 
-https://github.com/feross/bittorrent-dht
-https://github.com/feross/create-torrent
-https://github.com/torrentkino/torrentkino
-https://github.com/maxogden/torrent
-https://github.com/mwarning/masala
-https://github.com/mwarning/KadNode
-https://github.com/tjfontaine/node-dns
-https://github.com/Mononofu/P2P-DNS
-https://github.com/okTurtles/dnschain
-https://github.com/mafintosh/read-torrent
-https://github.com/fanatid/node-libtorrent
-https://github.com/WizKid/node-bittorrent-tracker
+- https://github.com/feross/bittorrent-dht
+- https://github.com/feross/create-torrent
+- https://github.com/torrentkino/torrentkino
+- https://github.com/maxogden/torrent
+- https://github.com/mwarning/masala
+- https://github.com/mwarning/KadNode
+- https://github.com/tjfontaine/node-dns
+- https://github.com/Mononofu/P2P-DNS
+- https://github.com/okTurtles/dnschain
+- https://github.com/mafintosh/read-torrent
+- https://github.com/fanatid/node-libtorrent
+- https://github.com/WizKid/node-bittorrent-tracker
+
+
