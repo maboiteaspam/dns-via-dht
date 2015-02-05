@@ -22,6 +22,7 @@
     "bittorrent-dht": "^2.6.4",
     "commander": "^2.6.0",
     "create-torrent": "^3.8.0",
+    "debug": "^2.1.1",
     "domain-name-parser": "0.0.5",
     "parse-torrent": "^4.0.0"
   }

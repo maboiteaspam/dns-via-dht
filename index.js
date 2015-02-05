@@ -3,6 +3,7 @@ var parse = require('domain-name-parser');
 var createTorrent = require('create-torrent');
 var parseTorrent = require('parse-torrent');
 var bencode = require('bencode');
+var debug = require('debug')('dht-dns-solver');
 
 var isValidDns = function(dns){
   var parsedDomain = parse(dns);
@@ -72,10 +73,13 @@ var DHTSolver = function(opts){
     var announcedDns = this.announcedDns;
     if (isValidDns(dnsToSolve) ) {
       if (pendingDns[dnsToSolve]) {
+        debug('already pending');
         pendingDns[dnsToSolve].push(then);
       } else if (knownDns[dnsToSolve]) {
+        debug('known dns');
         then(null, knownDns[dnsToSolve]);
       } else if (announcedDns[dnsToSolve]) {
+        debug('local dns');
         then(null, announcedDns[dnsToSolve]);
       } else {
         pendingDns[dnsToSolve] = {
@@ -105,100 +109,148 @@ var DHTSolver = function(opts){
     var pendingChallenges = this.pendingChallenges;
     var knownDns = this.knownDns;
 
+    debug('bootstrap=%s', opts.bootstrap);
+    debug('K=%s', opts.K);
     this.dhTable = DHTY(opts, function(dhTable) {
+      debug('DHT is ready');
 
-      dhTable.on('peer', function (addr, infoHash, from) {
+      var getPendingDnsQuery = function(addr, infoHash, from){
+        debug('peer found %s', infoHash);
+        debug('peer addr %s', addr);
+        debug('peer from %s', from);
         var transaction = pendingLookup[infoHash];
         if (transaction) {
+          debug('found peer for transaction %s', infoHash);
           var name = transaction.question;
           if (pendingDns[name]) {
-            var transactionId = dhTable._getTransactionId(addr, function(){});
-            var message = {
-              "t":transactionIdToBuffer(transactionId),
-              "y":"q",
-              "q":"auth",
-              "a":{"c":"g"}
-            };
-            pendingChallenges[addr] = message;
-
-            dhTable._send(addr, message);
-            pendingChallenges[addr].question = name;
-            pendingChallenges[addr].infoHash = infoHash;
-            console.log('auth ' + addr)
+            return name;
           }
+        }
+        return false;
+      };
+
+      var challengePeer = function(addr, infoHash, name){
+        var transactionId = dhTable._getTransactionId(addr, function(){});
+        var message = {
+          "t":transactionIdToBuffer(transactionId),
+          "y":"q",
+          "q":"auth",
+          "a":{"c":"g"}
+        };
+        pendingChallenges[addr] = message;
+
+        debug('sent auth to %s', addr);
+
+        dhTable._send(addr, message);
+        pendingChallenges[addr].question = name;
+        pendingChallenges[addr].infoHash = infoHash;
+      };
+
+      dhTable.on('peer', function(addr, infoHash, from){
+        var name = getPendingDnsQuery(addr, infoHash, from);
+        if ( name !== false ){
+          challengePeer(addr, infoHash, name);
         }
       });
 
-
-      dhTable.socket.on('message', function (data, rinfo){
-        var addr = rinfo.address + ':' + rinfo.port;
+      var decodeMessage = function(data){
         var message;
         try {
           message = bencode.decode(data);
-          if (message) {
-            var type = message.y && message.y.toString();
-            if (type === 'q') {
-              var question = message.q && message.q.toString();
-              console.log(type + ':' + question)
-              if (question === 'auth') {
-                var challenge = message.a
-                  && message.a.c
-                  && message.a.c.toString();
-                // do something to cipher/un cipher the challenge here
-
-                console.log('message ' + type + ' '+question);
-                console.log('challenge ' + challenge);
-                // then send reply
-                var transactionId = dhTable._getTransactionId(addr);
-                var response = {
-                  "t":transactionIdToBuffer(transactionId),
-                  "y":"r",
-                  "q":"auth",
-                  "r":{"c":challenge/*to improve*/}
-                };
-                dhTable._send(addr, response);
-              }
-
-            } else if (type === 'r' && pendingChallenges[addr]) {
-              var challenge = message.r
-                && message.r.c
-                && message.r.c.toString();
-              // do something to cipher/un cipher the challenge here
-
-              console.log('message ' + type );
-              console.log('challenge ' + challenge);
-
-              // check it matches
-              if (challenge === 'g' ) {
-                var name = pendingChallenges[addr].question;
-                var infoHash = pendingChallenges[addr].infoHash;
-                var then = pendingDns[name].then;
-
-                delete pendingChallenges[addr];
-                delete pendingDns[name];
-                delete pendingLookup[infoHash];
-
-                knownDns[name] = {
-                  ip: addr.split(':')[0],
-                  dns: name
-                };
-                then.forEach(function(cb){
-                  cb(null, knownDns[name]);
-                });
-              }
-            }
+          if (!message) {
+            throw 'invalid message';
           }
         } catch (err) {
           console.log(err);
+          return false;
         }
 
-      });
+        return message;
+      };
 
-      process.nextTick(function(){
-        if (then) {
-          then();
+      var isAuthRequest = function (addr, message){
+        var type = message.y && message.y.toString();
+        if (type === 'q') {
+          var question = message.q && message.q.toString();
+          debug('got message %s:%s from %s', type, question, addr);
+          return question === 'auth';
+        }
+        return false;
+      };
+
+      var isAuthRequestReply = function (addr, message){
+        var type = message.y && message.y.toString();
+        if (type === 'r') {
+          debug('got message %s from %s', type, addr);
+          if (pendingChallenges[addr]) {
+            var challenge = message.r
+              && message.r.c
+              && message.r.c.toString();
+            return challenge !== undefined;
+          }
+        }
+        return false;
+      };
+
+      var replyAuthRequest = function(message, addr){
+        var challenge = message.a
+          && message.a.c
+          && message.a.c.toString();
+        // do something to cipher/un cipher the challenge here
+
+        // then send reply
+        var response = {
+          "y":"r",
+          "r":{"c":challenge/*to improve*/}
+        };
+        dhTable._send(addr, response);
+      };
+
+      var validateAuthRequestReply = function(message, addr){
+        var challenge = message.a
+          && message.a.c
+          && message.a.c.toString();
+        // do something to cipher/un cipher the challenge here
+
+        debug('got response %s from %s', challenge, addr);
+
+        // check it matches
+        return challenge === 'g';
+      };
+
+      var resolveDNSQuestion = function(addr){
+        var name = pendingChallenges[addr].question;
+        var infoHash = pendingChallenges[addr].infoHash;
+        var then = pendingDns[name].then;
+
+        delete pendingChallenges[addr];
+        delete pendingDns[name];
+        delete pendingLookup[infoHash];
+
+        knownDns[name] = {
+          ip: addr.split(':')[0],
+          dns: name
+        };
+        then.forEach(function(cb){
+          cb(null, knownDns[name]);
+        });
+      };
+
+      dhTable.socket.on('message', function (data, rinfo){
+        var message = decodeMessage(data);
+        if (message !== false) {
+          var addr = rinfo.address + ':' + rinfo.port;
+          if (isAuthRequest(addr, message) ){
+            replyAuthRequest(addr, message);
+          } else if (isAuthRequestReply(addr, message) ){
+            if (validateAuthRequestReply(addr, message) ){
+              resolveDNSQuestion(addr);
+            }
+          }
         }
       });
+
+      process.nextTick(then);
 
     });
     this.dhTable.listen(opts.port, opts.hostname);

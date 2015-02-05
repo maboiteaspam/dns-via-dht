@@ -5,7 +5,6 @@
 var program = require('commander');
 
 var pkg = require('./package.json');
-var DHTSolver = require('./index');
 
 // Configure CLI
 
@@ -42,17 +41,21 @@ program
     };
 
     if (program.verbose) {
-      opts.debug = '*';
+      process.env['DEBUG'] = '*';
+      process.env['DEBUG'] = 'dht-dns-solver';
     }
 
-    if (program.K) {
-      opts.K = program.K;
+    if (program.knodes) {
+      opts.K = program.knodes;
     }
 
-    if (program.bootstrap) {
+    if (program.bootstrap === '') {
+      opts.bootstrap = false;
+    } else if (program.bootstrap) {
       opts.bootstrap = program.bootstrap;
     }
 
+    var DHTSolver = require('./index');
     var solver = new DHTSolver(opts);
     console.log('Starting DHT on ' + solver.getDhtAddress() );
     solver.start(function(){
@@ -74,17 +77,21 @@ program.command('resolve <dns>')
     };
 
     if (program.verbose) {
-      opts.debug = '*';
+      process.env['DEBUG'] = '*';
+      process.env['DEBUG'] = 'dht-dns-solver';
     }
 
-    if (program.K) {
-      opts.K = program.K;
+    if (program.knodes) {
+      opts.K = program.knodes;
     }
 
-    if (program.bootstrap) {
+    if (program.bootstrap === '') {
+      opts.bootstrap = false;
+    } else if (program.bootstrap) {
       opts.bootstrap = program.bootstrap;
     }
 
+    var DHTSolver = require('./index');
     var solver = new DHTSolver(opts);
     console.log('Starting DHT on ' + solver.getDhtAddress() );
     solver.start(function(){
@@ -96,6 +103,37 @@ program.command('resolve <dns>')
         console.log('Resolve succeed !');
         console.log(response.dns + ' = > ' + response.ip);
       });
+    });
+  });
+
+program.command('dhtstart')
+  .description('Start empty DHT')
+  .action(function(dns){
+    var opts = {
+      port: parseInt(program.port) || 9092,
+      hostname: program.hostname || '0.0.0.0'
+    };
+
+    if (program.verbose) {
+      process.env['DEBUG'] = '*';
+      process.env['DEBUG'] = 'dht-dns-solver';
+    }
+
+    if (program.knodes) {
+      opts.K = program.knodes;
+    }
+
+    if (program.bootstrap === '') {
+      opts.bootstrap = false;
+    } else if (program.bootstrap) {
+      opts.bootstrap = program.bootstrap;
+    }
+
+    var DHTSolver = require('./index');
+    var solver = new DHTSolver(opts);
+    console.log('Starting DHT on ' + solver.getDhtAddress() );
+    solver.start(function(){
+      console.log('DHT ready');
     });
   });
 
