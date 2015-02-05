@@ -1,6 +1,6 @@
 # DHT DNS solver
 
-Provides an API to announce and resolve a domain name via DHT table.
+Provides an API to announce and resolve a domain name via DHT.
 
 Still a work in progress : )
 
@@ -131,7 +131,12 @@ It provides you methods such start(then), resolve(dns,then), announce(dns).
 
 # TODO
 
+##### really missing stuff
 - implement challenge
 - make test IRL
 - add continuous testing
+
+
+##### to make it better
 - proper implementation via method binding on bittorrent-dht
+- improve verbose option to enhance debug reading

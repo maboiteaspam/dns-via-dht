@@ -243,17 +243,17 @@ var DHTSolver = function(opts){
   this.resolver = null;
 
   this.announce = function(newDns){
-    if(!this.announcer) throw 'Announcer not ready !';
+    if(!this.announcer) throw 'Announcer not ready !'; // cannot consume an announcer if DHTSolver is not yet started
     return this.announcer.announce(newDns);
   };
 
   this.announceAll = function(){
-    if(!this.announcer) throw 'Announcer not ready !';
+    if(!this.announcer) throw 'Announcer not ready !'; // cannot consume an announcer if DHTSolver is not yet started
     return this.announcer.announceAll();
   };
 
   this.resolve = function(dnsToSolve, then){
-    if(!this.resolver) throw 'Resolver not ready !';
+    if(!this.resolver) throw 'Resolver not ready !'; // cannot consume a resolver if DHTSolver is not yet started
     if( !this.announcer.isAnnounced(dnsToSolve) ) {
       return this.resolver.resolve(dnsToSolve, then);
     }
@@ -274,6 +274,7 @@ var DHTSolver = function(opts){
       that.announcer = new DHTNodeAnnouncer(dhTable, opts);
       that.resolver = new DHTNodeResolver(dhTable, opts);
 
+      // peer announce a dns that matches a pending question, challenge him with 'auth' request
       dhTable.on('peer', function (addr, infoHash){
         var name = that.resolver.getPendingDNSQuestion(infoHash);
         if ( name !== false ){
@@ -296,6 +297,7 @@ var DHTSolver = function(opts){
         return message;
       };
 
+      // detect and realize the negotiation for 'auth' request - reply sequence
       dhTable.socket.on('message', function (data, rinfo){
         var message = decodeMessage(data);
         if (message !== false) {

@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-//process.env['DEBUG'] = '*';
-
 var program = require('commander');
 
 var pkg = require('./package.json');
