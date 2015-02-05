@@ -80,6 +80,55 @@ The process can be repeated as many times as you want to grow the DHT.
 
 ```
 
+# API
+
+dns-dht-solver is a module that exposes a DHTSolver constructor.
+
+```
+    var DHTSolver = require('dns-dht-solver');
+    var solver = new DHTSolver(opts || {
+      port: DHT port number
+      hostname: DHT hostname
+      K: K nodes before DHT gets ready
+      bootstrap: bootstrap method : 'diy', false, [ip/hostname,...]
+    });
+```
+
+It provides you methods such start(then), resolve(dns,then), announce(dns).
+
+###### start(then)
+
+```
+    solver.start(function(){
+      console.log('DHT ready');
+    });
+```
+
+###### resolve(dns, then)
+
+```
+    solver.start(function(){
+      solver.resolve(dns, function(err, response){
+        console.log(err);
+        console.log(response.dns + ' = > ' + response.ip);
+      });
+    });
+```
+
+###### announce(dns)
+
+```
+    solver.start(function(){
+      if (solver.announce(dns) ){
+        console.log('Announcing ' + dns);
+      } else {
+        console.log('Did not announce ' + dns);
+      }
+    });
+```
+
+
+
 # TODO
 
 - implement challenge
