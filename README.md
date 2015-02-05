@@ -41,13 +41,13 @@ node cli.js dhtstart -b '' -p 9090 -h '127.0.0.1' -K 1
 Let s connect that empty DHT and announce our domain name.
 
 ```
-node cli.js announce 'mydomain.com' -b '' -p 9090 -h '127.0.0.1' -K 1
+node cli.js announce 'mydomain.com' -b '' -p 9091 -h '127.0.0.1' -K 1
 ```
 
 Let s now resolve the domain name on the previous DHT.
 
 ```
-node cli.js resolve 'mydomain.com' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9091 -K 1
+node cli.js resolve 'mydomain.com' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9092 -K 1
 ```
 
 In all cases we reduce K nodes for fasten the testing.
