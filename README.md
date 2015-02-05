@@ -6,19 +6,19 @@ Still a work in progress : )
 
 # Install
 
-```sh
+```zsh
 npm i maboiteaspam/dht-dns-solver
 ```
 
 # Run
 
 #### Terminal 1
-```sh
+```zsh
 node cli.js announce 'mydomain.com'
 ```
 
 #### Terminal 2
-```sh
+```zsh
 node cli.js resolve 'mydomain.com'
 ```
 
@@ -26,7 +26,7 @@ node cli.js resolve 'mydomain.com'
 
 Something that happens to me, i workaround this by doing a dirty network scan
 
-```sh
+```zsh
 node cli.js resolve 'mydomain.com' -b diy
 ```
 
@@ -34,19 +34,19 @@ node cli.js resolve 'mydomain.com' -b diy
 
 Let's start by creating an empty DHT to serve as a bootstrap nodes to our network.
 
-```sh
+```zsh
 node cli.js dhtstart -b '' -p 9090 -h '127.0.0.1' -K 1
 ```
 
 Let s connect that empty DHT and announce our domain name.
 
-```sh
+```zsh
 node cli.js announce 'mydomain.com' -b '' -p 9091 -h '127.0.0.1' -K 1
 ```
 
 Let s now resolve the domain name on the previous DHT.
 
-```sh
+```zsh
 node cli.js resolve 'mydomain.com' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9092 -K 1
 ```
 
@@ -57,7 +57,7 @@ The process can be repeated as many times as you want to grow the DHT.
 
 # Usage
 
-```sh
+```zsh
   Usage: cli [options] [command]
 
 
