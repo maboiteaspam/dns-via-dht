@@ -27,7 +27,7 @@ node cli.js resolve 'mydomain.com'
 Something that happens to me, i workaround this by doing a dirty network scan
 
 ```zsh
-node cli.js resolve 'mydomain.com' -b diy
+node cli.js resolve 'mydomain.com' -b 'diy'
 ```
 
 #### Test locally
