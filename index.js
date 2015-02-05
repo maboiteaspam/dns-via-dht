@@ -10,31 +10,15 @@ var isValidDns = function(dns){
   return !parsedDomain.tokenized.length < 2;
 };
 
-
-var DHTSolver = function(opts){
-
-  if (!opts.port) {
-    opts.port = 9090;
-  }
-  if (!opts.hostname) {
-    opts.hostname = '127.0.0.1';
-  }
-
-  var DHTY = require('bootstrap-dht-yourself');
-
+var DHTNodeAnnouncer = function(dhTable, opts){
   this.announcedDns = {};
-  this.knownDns = {};
-  this.pendingDns = {};
-  this.pendingLookup = {};
-  this.pendingChallenges = {};
-  this.dhTable = null;
 
+  // announce and record a specific dns on the network
   this.announce = function(newDns){
     var announcedDns = this.announcedDns;
-    var dhTable = this.dhTable;
-    if (isValidDns(newDns) && !announcedDns[newDns]) {
+    if (isValidDns(newDns) && !this.isAnnounced(newDns)) {
       announcedDns[newDns] = {
-        ip: '127.0.0.1',
+        ip: '127.0.0.1', // this is for internal resolution
         dns: newDns
       };
       createTorrent(new Buffer(newDns), {name: newDns},
@@ -50,9 +34,14 @@ var DHTSolver = function(opts){
     return false;
   };
 
+  //
+  this.isAnnounced = function(newDns){
+    return !!this.announcedDns[newDns];
+  };
+
+  // announce all recorded dns
   this.announceAll = function(){
     var announcedDns = this.announcedDns;
-    var dhTable = this.dhTable;
     Object.keys(announcedDns).forEach(function(dns){
       // console.log('announcing ' + dns);
       createTorrent(new Buffer(dns), {name: dns}, function (err, torrent) {
@@ -65,12 +54,53 @@ var DHTSolver = function(opts){
     });
   };
 
+  // check if a message query is 'auth', it is send by the resolver
+  this.isAuthRequest = function (addr, message) {
+    var type = message.y && message.y.toString();
+    if (type === 'q') {
+      var question = message.q && message.q.toString();
+      return question === 'auth';
+    }
+    return false;
+  };
+
+  // answer the 'auth' query
+  this.replyAuthRequest = function(addr, message){
+
+    var challenge = message.a
+      && message.a.c
+      && message.a.c.toString();
+
+    debug('got \'auth\' request from %s', addr);
+    debug(message);
+
+    // do something to cipher/un cipher the challenge here
+
+    // then send reply
+    var response = {
+      "y":"r",
+      "r":{"c":challenge/*to improve*/}
+    };
+    dhTable._send(addr, response);
+  };
+
+
+};
+
+var DHTNodeResolver = function(dhTable){
+
+  this.knownDns = {};
+  this.pendingDns = {};
+  this.pendingLookup = {};
+  this.pendingChallenges = {};
+
+  // starts the question resolution
   this.resolve = function(dnsToSolve, then){
-    var dhTable = this.dhTable;
+
     var knownDns = this.knownDns;
     var pendingDns = this.pendingDns;
     var pendingLookup = this.pendingLookup;
-    var announcedDns = this.announcedDns;
+
     if (isValidDns(dnsToSolve) ) {
       if (pendingDns[dnsToSolve]) {
         debug('already pending');
@@ -78,9 +108,6 @@ var DHTSolver = function(opts){
       } else if (knownDns[dnsToSolve]) {
         debug('known dns');
         then(null, knownDns[dnsToSolve]);
-      } else if (announcedDns[dnsToSolve]) {
-        debug('local dns');
-        then(null, announcedDns[dnsToSolve]);
       } else {
         pendingDns[dnsToSolve] = {
           question: dnsToSolve,
@@ -103,53 +130,154 @@ var DHTSolver = function(opts){
     }
   };
 
-  this.start = function(then){
+  // get relative dns question to an infoHash announced by a remote peer
+  this.getPendingDNSQuestion = function (infoHash){
+
+    var pendingLookup = this.pendingLookup;
+    var pendingDns = this.pendingDns;
+
+    var transaction = pendingLookup[infoHash];
+    if (transaction) {
+      debug('found peer for transaction %s', infoHash);
+      var name = transaction.question;
+      if (pendingDns[name]) {
+        return name;
+      }
+    }
+    return false;
+  };
+
+  // check if a peer announcer can resolve identification
+  this.challengePeerAnnouncer = function (addr, infoHash, question){
+
+    var pendingChallenges = this.pendingChallenges;
+
+    var transactionId = dhTable._getTransactionId(addr, function(){});
+    var message = {
+      "t":transactionIdToBuffer(transactionId),
+      "y":"q",
+      "q":"auth",
+      "a":{"c":"g"}
+    };
+    pendingChallenges[addr] = message;
+
+    debug('sent \'auth\' request to %s', addr);
+    debug(message);
+
+    dhTable._send(addr, message);
+    pendingChallenges[addr].question = question;
+    pendingChallenges[addr].infoHash = infoHash;
+  };
+
+  // check if a response message is an 'auth' request reply
+  this.isAuthRequestReply = function(addr, message){
+
+    var pendingChallenges = this.pendingChallenges;
+
+    var type = message.y && message.y.toString();
+    if (type === 'r') {
+      if (pendingChallenges[addr]) {
+        var challenge = message.r
+          && message.r.c
+          && message.r.c.toString();
+        return challenge !== undefined;
+      }
+    }
+    return false;
+  };
+
+  // validate that announcer correctly answered the challenge
+  this.validateAuthRequestReply = function(addr, message){
+    var challenge = message.r
+      && message.r.c
+      && message.r.c.toString();
+    // do something to cipher/un cipher the challenge here
+
+    debug('got \'auth\' request reply from %s', addr);
+    debug(message)
+
+    // check it matches
+    return challenge === 'g';
+  };
+
+  // resolve pending resolve question and invoke relative callback
+  this.resolveDNSQuestion = function(addr){
+
+    var pendingChallenges = this.pendingChallenges;
     var pendingDns = this.pendingDns;
     var pendingLookup = this.pendingLookup;
-    var pendingChallenges = this.pendingChallenges;
     var knownDns = this.knownDns;
+
+    var name = pendingChallenges[addr].question;
+    var infoHash = pendingChallenges[addr].infoHash;
+    var then = pendingDns[name].then;
+
+    delete pendingChallenges[addr];
+    delete pendingDns[name];
+    delete pendingLookup[infoHash];
+
+    knownDns[name] = {
+      ip: addr.split(':')[0],
+      dns: name
+    };
+    then.forEach(function(cb){
+      cb(null, knownDns[name]);
+    });
+  };
+};
+
+
+var DHTSolver = function(opts){
+
+  if (!opts.port) {
+    opts.port = 9090;
+  }
+  if (!opts.hostname) {
+    opts.hostname = '127.0.0.1';
+  }
+
+  var DHTY = require('bootstrap-dht-yourself');
+
+  this.dhTable = null;
+  this.announcer = null;
+  this.resolver = null;
+
+  this.announce = function(newDns){
+    if(!this.announcer) throw 'Announcer not ready !';
+    return this.announcer.announce(newDns);
+  };
+
+  this.announceAll = function(){
+    if(!this.announcer) throw 'Announcer not ready !';
+    return this.announcer.announceAll();
+  };
+
+  this.resolve = function(dnsToSolve, then){
+    if(!this.resolver) throw 'Resolver not ready !';
+    if( !this.announcer.isAnnounced(dnsToSolve) ) {
+      return this.resolver.resolve(dnsToSolve, then);
+    }
+    then(null, this.announcer.announcedDns[dnsToSolve]);
+    return false;
+  };
+
+
+  // start the DHT and invoke the callback(announcer, resolver)
+  this.start = function(then){
 
     debug('bootstrap=%s', opts.bootstrap);
     debug('K=%s', opts.K);
+    var that = this;
     this.dhTable = DHTY(opts, function(dhTable) {
       debug('DHT is ready');
 
-      var getPendingDnsQuery = function(addr, infoHash, from){
-        debug('peer found %s', infoHash);
-        debug('peer addr %s', addr);
-        debug('peer from %s', from);
-        var transaction = pendingLookup[infoHash];
-        if (transaction) {
-          debug('found peer for transaction %s', infoHash);
-          var name = transaction.question;
-          if (pendingDns[name]) {
-            return name;
-          }
-        }
-        return false;
-      };
+      that.announcer = new DHTNodeAnnouncer(dhTable, opts);
+      that.resolver = new DHTNodeResolver(dhTable, opts);
 
-      var challengePeer = function(addr, infoHash, name){
-        var transactionId = dhTable._getTransactionId(addr, function(){});
-        var message = {
-          "t":transactionIdToBuffer(transactionId),
-          "y":"q",
-          "q":"auth",
-          "a":{"c":"g"}
-        };
-        pendingChallenges[addr] = message;
-
-        debug('sent auth to %s', addr);
-
-        dhTable._send(addr, message);
-        pendingChallenges[addr].question = name;
-        pendingChallenges[addr].infoHash = infoHash;
-      };
-
-      dhTable.on('peer', function(addr, infoHash, from){
-        var name = getPendingDnsQuery(addr, infoHash, from);
+      dhTable.on('peer', function (addr, infoHash){
+        var name = that.resolver.getPendingDNSQuestion(infoHash);
         if ( name !== false ){
-          challengePeer(addr, infoHash, name);
+          that.resolver.challengePeerAnnouncer(addr, infoHash, name);
         }
       });
 
@@ -168,89 +296,23 @@ var DHTSolver = function(opts){
         return message;
       };
 
-      var isAuthRequest = function (addr, message){
-        var type = message.y && message.y.toString();
-        if (type === 'q') {
-          var question = message.q && message.q.toString();
-          debug('got message %s:%s from %s', type, question, addr);
-          return question === 'auth';
-        }
-        return false;
-      };
-
-      var isAuthRequestReply = function (addr, message){
-        var type = message.y && message.y.toString();
-        if (type === 'r') {
-          debug('got message %s from %s', type, addr);
-          if (pendingChallenges[addr]) {
-            var challenge = message.r
-              && message.r.c
-              && message.r.c.toString();
-            return challenge !== undefined;
-          }
-        }
-        return false;
-      };
-
-      var replyAuthRequest = function(message, addr){
-        var challenge = message.a
-          && message.a.c
-          && message.a.c.toString();
-        // do something to cipher/un cipher the challenge here
-
-        // then send reply
-        var response = {
-          "y":"r",
-          "r":{"c":challenge/*to improve*/}
-        };
-        dhTable._send(addr, response);
-      };
-
-      var validateAuthRequestReply = function(message, addr){
-        var challenge = message.a
-          && message.a.c
-          && message.a.c.toString();
-        // do something to cipher/un cipher the challenge here
-
-        debug('got response %s from %s', challenge, addr);
-
-        // check it matches
-        return challenge === 'g';
-      };
-
-      var resolveDNSQuestion = function(addr){
-        var name = pendingChallenges[addr].question;
-        var infoHash = pendingChallenges[addr].infoHash;
-        var then = pendingDns[name].then;
-
-        delete pendingChallenges[addr];
-        delete pendingDns[name];
-        delete pendingLookup[infoHash];
-
-        knownDns[name] = {
-          ip: addr.split(':')[0],
-          dns: name
-        };
-        then.forEach(function(cb){
-          cb(null, knownDns[name]);
-        });
-      };
-
       dhTable.socket.on('message', function (data, rinfo){
         var message = decodeMessage(data);
         if (message !== false) {
           var addr = rinfo.address + ':' + rinfo.port;
-          if (isAuthRequest(addr, message) ){
-            replyAuthRequest(addr, message);
-          } else if (isAuthRequestReply(addr, message) ){
-            if (validateAuthRequestReply(addr, message) ){
-              resolveDNSQuestion(addr);
+          if (that.announcer.isAuthRequest(addr, message) ){
+            that.announcer.replyAuthRequest(addr, message);
+          } else if (that.resolver.isAuthRequestReply(addr, message) ){
+            if (that.resolver.validateAuthRequestReply(addr, message) ){
+              that.resolver.resolveDNSQuestion(addr);
             }
           }
         }
       });
 
-      process.nextTick(then);
+      process.nextTick(function(){
+        then();
+      });
 
     });
     this.dhTable.listen(opts.port, opts.hostname);
@@ -263,6 +325,7 @@ var DHTSolver = function(opts){
   this.getDhtAddress = function(){
     return opts.hostname + ':' + opts.port;
   };
+
   this.getDhStatus = function(){
     var dhTable = this.dhTable;
     var nodes = [];
@@ -285,6 +348,7 @@ var DHTSolver = function(opts){
 
 };
 
+// took from feross/bittorrent-dht
 function transactionIdToBuffer (transactionId) {
   if (Buffer.isBuffer(transactionId)) {
     return transactionId
@@ -294,4 +358,6 @@ function transactionIdToBuffer (transactionId) {
     return buf
   }
 }
+
+// expose a constructor
 module.exports = DHTSolver;
