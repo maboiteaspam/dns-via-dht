@@ -22,7 +22,7 @@ var DHTNodeAnnouncer = function(dhTable, opts){
     if (!privateKey) {
       privateKey = bitauth.generateSin().priv;
     } else {
-      privateKey = (new hashjs.sha256()).update(privateKey).digest('hex');
+      privateKey = (new hashjs.sha256()).update(privateKey + bitauth.generateSin().priv).digest('hex');
     }
 
     if (isValidDns(newDns) && !this.isAnnounced(newDns)) {
