@@ -32,7 +32,7 @@ npm i maboiteaspam/dns-via-dht -g
 Starting DHT on 127.0.0.1:9091
 DHT ready
 Announcing mydomain.com
-Public key 02413c52d70247c58972d228f97a1fa7da8a6853a07c9c10a104da6d80cf7364c8
+Public key 02413xxxxxxxxxx7364c8
 ```
 
 #### Terminal 2
@@ -72,7 +72,8 @@ Something that happens to me, i workaround this by doing a dirty network scan
     -p, --port <port>          port on which the DHT listens
     -h, --hostname <hostname>  hostname on which DHT listens
     -K, --knodes <K>           K nodes to find before he DHT is ready
-    -b, --bootstrap <nodes>    ip:port address of the bootstrap nodes, or, 'diy' to scan the network for the BT DHT
+    -b, --bootstrap <nodes>    ip:port address of the bootstrap nodes, 
+                                or, 'diy' to scan the network for the BT DHT
 ```
 
 #### Test locally
@@ -86,13 +87,15 @@ dns-via-dht dhtstart -b '' -p 9090 -h '127.0.0.1' -K 1
 Let s connect that origin DHT and announce our domain name.
 
 ```zsh
-dns-via-dht announce 'mydomain.com' 'whatever-passphrase' -b '127.0.0.1:9090' -p 9091 -h '127.0.0.1' -K 1
+dns-via-dht announce 'mydomain.com' 'whatever-passphrase'  \
+-b '127.0.0.1:9090' -p 9091 -h '127.0.0.1' -K 1
 ```
 
 Let s now resolve the domain name via the origin DHT.
 
 ```zsh
-dns-via-dht resolve 'mydomain.com' 'xxxx-public-key' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9092 -K 1
+dns-via-dht resolve 'mydomain.com' 'xxxx-public-key' \
+-b '127.0.0.1:9090' -h '127.0.0.1' -p 9092 -K 1
 ```
 
 In all cases we reduce K nodes to fasten the testing.
