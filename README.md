@@ -28,7 +28,7 @@ npm i maboiteaspam/dns-via-dht -g
 
 #### Terminal 1
 ```zsh
-> dns-via-dht announce 'mydomain.com' passphrase
+> dns-via-dht announce 'mydomain.com' 'passphrase'
 Starting DHT on 127.0.0.1:9091
 DHT ready
 Announcing mydomain.com
@@ -40,7 +40,7 @@ Public key 02413c52d70247c58972d228f97a1fa7da8a6853a07c9c10a104da6d80cf7364c8
 Using Terminal 1 Public key.
 
 ```zsh
-> dns-via-dht resolve 'mydomain.com' [public-key]
+> dns-via-dht resolve 'mydomain.com' '[public-key]'
 ```
 
 #### Unavailable bootstrap nodes
@@ -48,7 +48,7 @@ Using Terminal 1 Public key.
 Something that happens to me, i workaround this by doing a dirty network scan
 
 ```zsh
-> dns-via-dht resolve 'mydomain.com' pubKey -b 'diy'
+> dns-via-dht resolve 'mydomain.com' 'pubKey' -b 'diy'
 ```
 
 
