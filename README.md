@@ -92,7 +92,7 @@ dns-via-dht announce 'mydomain.com' whatever-passphrase -b '127.0.0.1:9090' -p 9
 Let s now resolve the domain name via the origin DHT.
 
 ```zsh
-dns-via-dht resolve 'mydomain.com' '02a8e8a517ea4885be88ade890f85e17740fe22fa8439298a04ce8cbcaa83f05e3' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9092 -K 1
+dns-via-dht resolve 'mydomain.com' 'xxxx-public-key' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9092 -K 1
 ```
 
 In all cases we reduce K nodes to fasten the testing.
