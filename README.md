@@ -86,7 +86,7 @@ dns-via-dht dhtstart -b '' -p 9090 -h '127.0.0.1' -K 1
 Let s connect that origin DHT and announce our domain name.
 
 ```zsh
-dns-via-dht announce 'mydomain.com' whatever-passphrase -b '127.0.0.1:9090' -p 9091 -h '127.0.0.1' -K 1
+dns-via-dht announce 'mydomain.com' 'whatever-passphrase' -b '127.0.0.1:9090' -p 9091 -h '127.0.0.1' -K 1
 ```
 
 Let s now resolve the domain name via the origin DHT.
