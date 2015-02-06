@@ -40,7 +40,7 @@ program
 
     if (program.verbose) {
       process.env['DEBUG'] = '*';
-      process.env['DEBUG'] = 'dht-dns-solver';
+      process.env['DEBUG'] = 'dns-via-dht';
     }
 
     if (program.knodes) {
@@ -78,7 +78,7 @@ program.command('resolve <dns> <publickey>')
 
     if (program.verbose) {
       process.env['DEBUG'] = '*';
-      process.env['DEBUG'] = 'dht-dns-solver';
+      process.env['DEBUG'] = 'dns-via-dht';
     }
 
     if (program.knodes) {
@@ -116,7 +116,7 @@ program.command('dhtstart')
 
     if (program.verbose) {
       process.env['DEBUG'] = '*';
-      process.env['DEBUG'] = 'dht-dns-solver';
+      process.env['DEBUG'] = 'dns-via-dht';
     }
 
     if (program.knodes) {

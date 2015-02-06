@@ -5,7 +5,7 @@ var parseTorrent = require('parse-torrent');
 var bencode = require('bencode');
 var bitauth = require('bitauth');
 var hashjs = require('hash.js');
-var debug = require('debug')('dht-dns-solver');
+var debug = require('debug')('dns-via-dht');
 
 var isValidDns = function(dns){
   var parsedDomain = parse(dns);
@@ -22,7 +22,9 @@ var DHTNodeAnnouncer = function(dhTable, opts){
     if (!privateKey) {
       privateKey = bitauth.generateSin().priv;
     } else {
-      privateKey = (new hashjs.sha256()).update(privateKey + bitauth.generateSin().priv).digest('hex');
+      privateKey = (new hashjs.sha256())
+        .update(privateKey /*!!!*\ it is your duty to avoid rainbow table and SALT it */)
+        .digest('hex');
     }
 
     if (isValidDns(newDns) && !this.isAnnounced(newDns)) {
@@ -415,7 +417,13 @@ var DHTSolver = function(opts){
   };
 
   this.stop = function(then){
-    this.dhTable.destroy(then);
+    var that = this;
+    that.dhTable.destroy(function(){
+      that.dhTable = null;
+      that.resolver = null;
+      that.announcer = null;
+      if(then) then();
+    });
   };
 
   this.getDhtAddress = function(){

@@ -1,5 +1,5 @@
 {
-  "name": "dht-dns-solver",
+  "name": "dns-via-dht",
   "version": "1.0.0",
   "description": "dns solver via dht",
   "main": "index.js",
@@ -12,14 +12,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/maboiteaspam/dht-dns-solver"
+    "url": "https://github.com/maboiteaspam/dns-via-dht"
   },
   "author": "maboiteaspam",
   "license": "WTFPL",
   "bugs": {
-    "url": "https://github.com/maboiteaspam/dht-dns-solver/issues"
+    "url": "https://github.com/maboiteaspam/dns-via-dht/issues"
   },
-  "homepage": "https://github.com/maboiteaspam/dht-dns-solver",
+  "homepage": "https://github.com/maboiteaspam/dns-via-dht",
   "dependencies": {
     "bencode": "^0.6.0",
     "bitauth": "^0.2.1",
