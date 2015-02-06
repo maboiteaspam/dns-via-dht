@@ -6,11 +6,13 @@ It is using bitauth api to implement challenge identification of a peer announci
 
 Announcer attach a passphrase to each announced domains.
 
-Resolver performs a torrent lookup ad the domain name.
+Resolver transforms domain name in a torrent key, then starts a lookup.
 
-Resolver will get various peers responder, It will challenge each of them using a public key.
+Resolver will get various peers responding. It will challenge each of them using a public key it has been provided.
 
-The first peer to resolve correctly the challenge is trusted and returned as the remote end point.
+Each announcer will use its private key to sign the domain name question, then respond it.
+
+The first peer to resolve correctly the Resolver challenge is trusted and returned as the remote end point.
 
 # Beware
 
