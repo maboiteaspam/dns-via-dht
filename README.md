@@ -154,6 +154,7 @@ It provides methods such start(then), resolve(dns, publicKey, then), announce(dn
 - make test IRL
 - add continuous testing
 - provide a dns server implementation for quick setup
+- adjust timeout on dns lookup
 
 
 ##### to make it better
