@@ -30,9 +30,9 @@ program
   'ip:port address of the bootstrap nodes, or, \'diy\' to scan the network for the BT DHT');
 
 program
-  .command('announce <dns>')
+  .command('announce <dns> [passphrase]')
   .description('Announce a DNS on the network')
-  .action(function(dns){
+  .action(function(dns, passphrase){
     var opts = {
       port: parseInt(program.port) || 9090,
       hostname: program.hostname || '0.0.0.0'
@@ -58,17 +58,19 @@ program
     console.log('Starting DHT on ' + solver.getDhtAddress() );
     solver.start(function(){
       console.log('DHT ready');
-      if (solver.announce(dns) ){
+      if (solver.announce(dns, passphrase) ){
+        var announcements = solver.listAnnouncements();
         console.log('Announcing ' + dns);
+        console.log('Public key ' + announcements[dns]);
       } else {
         console.log('Did not announce ' + dns);
       }
     });
   });
 
-program.command('resolve <dns>')
+program.command('resolve <dns> <publickey>')
   .description('Resolve a DNS on the network')
-  .action(function(dns){
+  .action(function(dns, publickey){
     var opts = {
       port: parseInt(program.port) || 9091,
       hostname: program.hostname || '0.0.0.0'
@@ -95,7 +97,7 @@ program.command('resolve <dns>')
     solver.start(function(){
       console.log('DHT ready');
       console.log('resolving');
-      solver.resolve(dns, function(err, response){
+      solver.resolve(dns, publickey, function(err, response){
         console.log(err);
         console.log(response);
         console.log('Resolve succeed !');

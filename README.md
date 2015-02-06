@@ -2,6 +2,18 @@
 
 Provides an API to announce and resolve a domain name via DHT.
 
+It is using bitauth api to implement challenge identification of a peer announcing a domain we d like to resolve.
+
+Announcer attach a passphrase to each announced domains.
+
+Resolver performs a torrent lookup ad the domain name.
+
+Resolver will get various peers responder, It will challenge each of them using a public key.
+
+The first peer to resolve correctly the challenge is trusted and returned as the remote end point.
+
+# Beware
+
 Still a work in progress : )
 
 # Install
@@ -14,12 +26,12 @@ npm i maboiteaspam/dns-via-dht -g
 
 #### Terminal 1
 ```zsh
-dns-via-dht announce 'mydomain.com'
+dns-via-dht announce 'mydomain.com' passphrase
 ```
 
 #### Terminal 2
 ```zsh
-dns-via-dht resolve 'mydomain.com'
+dns-via-dht resolve 'mydomain.com' public-key
 ```
 
 #### Unavailable bootstrap nodes
@@ -27,7 +39,7 @@ dns-via-dht resolve 'mydomain.com'
 Something that happens to me, i workaround this by doing a dirty network scan
 
 ```zsh
-dns-via-dht resolve 'mydomain.com' -b 'diy'
+dns-via-dht resolve 'mydomain.com' pubKey -b 'diy'
 ```
 
 
@@ -39,9 +51,9 @@ dns-via-dht resolve 'mydomain.com' -b 'diy'
 
   Commands:
 
-    announce <dns>  Announce a DNS on the network
-    resolve <dns>   Resolve a DNS on the network
-    dhtstart        Start empty DHT
+    announce <dns> [passphrase]  Announce a DNS on the network
+    resolve <dns> <publickey>    Resolve a DNS on the network
+    dhtstart                     Start empty DHT
 
   Options:
 
@@ -65,13 +77,13 @@ dns-via-dht dhtstart -b '' -p 9090 -h '127.0.0.1' -K 1
 Let s connect that origin DHT and announce our domain name.
 
 ```zsh
-dns-via-dht announce 'mydomain.com' -b '127.0.0.1:9090' -p 9091 -h '127.0.0.1' -K 1
+dns-via-dht announce 'mydomain.com' whatever-passphrase -b '127.0.0.1:9090' -p 9091 -h '127.0.0.1' -K 1
 ```
 
 Let s now resolve the domain name via the origin DHT.
 
 ```zsh
-dns-via-dht resolve 'mydomain.com' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9092 -K 1
+dns-via-dht resolve 'mydomain.com' '02a8e8a517ea4885be88ade890f85e17740fe22fa8439298a04ce8cbcaa83f05e3' -b '127.0.0.1:9090' -h '127.0.0.1' -p 9092 -K 1
 ```
 
 In all cases we reduce K nodes to fasten the testing.
@@ -92,7 +104,7 @@ dns-dht-solver is a module that exposes a DHTSolver constructor.
     });
 ```
 
-It provides methods such start(then), resolve(dns,then), announce(dns).
+It provides methods such start(then), resolve(dns, publicKey, then), announce(dns, passphrase).
 
 ###### start(then)
 
@@ -102,22 +114,22 @@ It provides methods such start(then), resolve(dns,then), announce(dns).
     });
 ```
 
-###### resolve(dns, then)
+###### resolve(dns, publicKey, then)
 
 ```js
     solver.start(function(){
-      solver.resolve(dns, function(err, response){
+      solver.resolve(dns, publicKey, function(err, response){
         console.log(err);
         console.log(response.dns + ' = > ' + response.ip);
       });
     });
 ```
 
-###### announce(dns)
+###### announce(dns, passphrase)
 
 ```js
     solver.start(function(){
-      if (solver.announce(dns) ){
+      if (solver.announce(dns, passphrase) ){
         console.log('Announcing ' + dns);
       } else {
         console.log('Did not announce ' + dns);
@@ -130,7 +142,6 @@ It provides methods such start(then), resolve(dns,then), announce(dns).
 # TODO
 
 ##### really missing stuff
-- implement challenge
 - make test IRL
 - add continuous testing
 - provide a dns server implementation for quick setup
@@ -156,5 +167,5 @@ It provides methods such start(then), resolve(dns,then), announce(dns).
 - https://github.com/mafintosh/read-torrent
 - https://github.com/fanatid/node-libtorrent
 - https://github.com/WizKid/node-bittorrent-tracker
-
+- https://github.com/bitpay/bitauth
 
