@@ -5,7 +5,6 @@ var parseTorrent = require('parse-torrent');
 var bencode = require('bencode');
 var bitauth = require('bitauth');
 var hashjs = require('hash.js');
-var debug = require('debug')('dns-via-dht');
 
 var isValidDns = function(dns){
   var parsedDomain = parse(dns);
@@ -13,6 +12,7 @@ var isValidDns = function(dns){
 };
 
 var DHTNodeAnnouncer = function(dhTable, opts){
+  var debug = require('debug')('dns-via-dht');
   this.announcedDns = {};
 
   // announce and record a specific dns on the network
@@ -131,6 +131,7 @@ var DHTNodeAnnouncer = function(dhTable, opts){
 };
 
 var DHTNodeResolver = function(dhTable){
+  var debug = require('debug')('dns-via-dht');
 
   this.knownDns = {};
   this.pendingDns = {};
@@ -140,6 +141,7 @@ var DHTNodeResolver = function(dhTable){
   // starts the question resolution
   this.resolve = function(dnsToSolve, publicKey, then){
 
+    var that = this;
     var knownDns = this.knownDns;
     var pendingDns = this.pendingDns;
     var pendingLookup = this.pendingLookup;
@@ -166,7 +168,21 @@ var DHTNodeResolver = function(dhTable){
             pendingLookup[torrent.infoHash] = {
               question: dnsToSolve
             };
-            dhTable.lookup(torrent.infoHash);
+            debug('lookup %s', torrent.infoHash);
+            dhTable.lookup(torrent.infoHash, function(err, closest){
+              console.error(err)
+              console.error(closest)
+
+              closest.forEach(function(message){
+                var name = that.getPendingDNSQuestion(torrent.infoHash);
+                if ( name !== false ){
+                  that.challengePeerAnnouncer(message.addr, torrent.infoHash, name);
+                } else {
+                  debug('skip peer %s %s', message.addr, torrent.infoHash);
+                }
+              })
+
+            });
           });
       }
     } else {
@@ -314,6 +330,7 @@ var DHTNodeResolver = function(dhTable){
 
 
 var DHTSolver = function(opts){
+  var debug = require('debug')('dns-via-dht');
 
   if (!opts.port) {
     opts.port = 9090;
@@ -346,7 +363,10 @@ var DHTSolver = function(opts){
   this.resolve = function(dnsToSolve, publicKey, then){
     if(!this.resolver) throw 'Resolver not ready !'; // cannot consume a resolver if DHTSolver is not yet started
     if( !this.announcer.isAnnounced(dnsToSolve) ) {
-      return this.resolver.resolve(dnsToSolve, publicKey, then);
+      return this.resolver.resolve(dnsToSolve, publicKey, function(err, closest){
+        console.error(closest);
+        if (then) then(err, closest);
+      });
     }
     then(null, this.announcer.announcedDns[dnsToSolve]);
     return false;
@@ -370,23 +390,10 @@ var DHTSolver = function(opts){
         var name = that.resolver.getPendingDNSQuestion(infoHash);
         if ( name !== false ){
           that.resolver.challengePeerAnnouncer(addr, infoHash, name);
+        } else {
+          debug('skip peer %s %s', addr, infoHash);
         }
       });
-
-      var decodeMessage = function(data){
-        var message;
-        try {
-          message = bencode.decode(data);
-          if (!message) {
-            throw 'invalid message';
-          }
-        } catch (err) {
-          console.error(err);
-          return false;
-        }
-
-        return message;
-      };
 
       // detect and realize the negotiation for 'auth' request - reply sequence
       dhTable.socket.on('message', function (data, rinfo){
@@ -430,7 +437,7 @@ var DHTSolver = function(opts){
     return opts.hostname + ':' + opts.port;
   };
 
-  this.getDhStatus = function(){
+  this.getDhtStatus = function(){
     var dhTable = this.dhTable;
     var nodes = [];
     dhTable.nodes.toArray().forEach(function(node) {
@@ -452,6 +459,20 @@ var DHTSolver = function(opts){
 
 };
 
+function decodeMessage(data){
+  var message;
+  try {
+    message = bencode.decode(data);
+    if (!message) {
+      throw 'invalid message';
+    }
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+
+  return message;
+};
 // took from feross/bittorrent-dht
 function transactionIdToBuffer (transactionId) {
   if (Buffer.isBuffer(transactionId)) {
