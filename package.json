@@ -24,6 +24,7 @@
     "bencode": "^0.6.0",
     "bitauth": "^0.2.1",
     "bittorrent-dht": "^2.6.4",
+    "bootstrap-dht-yourself": "maboiteaspam/bootstrap-dht-yourself",
     "commander": "^2.6.0",
     "create-torrent": "^3.8.0",
     "debug": "^2.1.1",
