@@ -36,7 +36,7 @@ var DHTNodeAnnouncer = function(dhTable, opts){
       createTorrent(new Buffer(newDns), {name: newDns},
         function (err, torrent) {
           if (err) {
-            console.error(err);
+            debug('err %s', err);
           }
           torrent = parseTorrent(torrent);
 
@@ -72,10 +72,10 @@ var DHTNodeAnnouncer = function(dhTable, opts){
   this.announceAll = function(){
     var announcedDns = this.announcedDns;
     Object.keys(announcedDns).forEach(function(dns){
-      // console.log('announcing ' + dns);
+      debug('announcing %s', dns);
       createTorrent(new Buffer(dns), {name: dns}, function (err, torrent) {
         if (err) {
-          console.log(err);
+          debug('err %s', err);
         }
         torrent = parseTorrent(torrent);
         dhTable.announce(torrent.infoHash, opts.port);
@@ -101,9 +101,9 @@ var DHTNodeAnnouncer = function(dhTable, opts){
       && message.a.q
       && message.a.q.toString();
 
-    var privateKey = announcedDns[question].privateKey;
+    if (announcedDns[question]) {
 
-    if (privateKey) {
+      var privateKey = announcedDns[question].privateKey;
 
       var publicKey = bitauth.getPublicKeyFromPrivateKey(privateKey);
       var signedData = bitauth.sign(question, privateKey);
@@ -149,7 +149,7 @@ var DHTNodeResolver = function(dhTable){
     if (isValidDns(dnsToSolve) ) {
       if (pendingDns[dnsToSolve]) {
         debug('already pending');
-        pendingDns[dnsToSolve].push(then);
+        pendingDns[dnsToSolve].then.push(then);
       } else if (knownDns[dnsToSolve]) {
         debug('known dns');
         then(null, knownDns[dnsToSolve]);
@@ -162,16 +162,16 @@ var DHTNodeResolver = function(dhTable){
         createTorrent(new Buffer(dnsToSolve), {name: dnsToSolve},
           function (err, torrent) {
             if (err) {
-              console.error(err);
+              debug('err %s', err);
             }
             torrent = parseTorrent(torrent);
             pendingLookup[torrent.infoHash] = {
               question: dnsToSolve
             };
-            debug('lookup %s', torrent.infoHash);
+            debug('lookup %s %s', dnsToSolve, torrent.infoHash);
             dhTable.lookup(torrent.infoHash, function(err, closest){
-              console.error(err)
-              console.error(closest)
+              debug('err %s', err);
+              debug('closest %s', closest);
 
               closest.forEach(function(message){
                 var name = that.getPendingDNSQuestion(torrent.infoHash);
@@ -364,7 +364,8 @@ var DHTSolver = function(opts){
     if(!this.resolver) throw 'Resolver not ready !'; // cannot consume a resolver if DHTSolver is not yet started
     if( !this.announcer.isAnnounced(dnsToSolve) ) {
       return this.resolver.resolve(dnsToSolve, publicKey, function(err, closest){
-        console.error(closest);
+        debug('err %s', err);
+        debug('closest %s', closest);
         if (then) then(err, closest);
       });
     }
@@ -467,7 +468,7 @@ function decodeMessage(data){
       throw 'invalid message';
     }
   } catch (err) {
-    console.error(err);
+    debug('err %s', err);
     return false;
   }
 
