@@ -58,7 +58,7 @@ program
     console.log('Starting DHT on ' + solver.getDhtAddress() );
     solver.start(function(){
       console.log('DHT ready');
-      if (solver.announce(dns, passphrase) ){
+      if (solver.announce(dns, passphrase+''+(new Date())+Math.random()) ){
         var announcements = solver.listAnnouncements();
         console.log('Announcing ' + dns);
         console.log('Public key ' + announcements[dns]);
@@ -102,6 +102,7 @@ program.command('resolve <dns> <publickey>')
         console.log(response);
         console.log('Resolve succeed !');
         console.log(response.dns + ' = > ' + response.ip);
+        solver.stop();
       });
     });
   });

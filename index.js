@@ -40,11 +40,15 @@ var DHTNodeAnnouncer = function(dhTable, opts){
           }
           torrent = parseTorrent(torrent);
 
+          debug('');
           debug('announced DNS %s', newDns);
           debug('announced infoHash %s', torrent.infoHash);
           debug('announced privateKey %s', privateKey);
-          debug('announced pubkey %s',
-            bitauth.getPublicKeyFromPrivateKey(privateKey));
+
+          var publicKey = bitauth.getPublicKeyFromPrivateKey(privateKey);
+          var sin = bitauth.getSinFromPublicKey(publicKey);
+          debug('announced pubkey %s', publicKey);
+          debug('announced sin %s', sin);
 
           dhTable.announce(torrent.infoHash, opts.port);
         });
@@ -88,7 +92,9 @@ var DHTNodeAnnouncer = function(dhTable, opts){
     var type = message.y && message.y.toString();
     if (type === 'q') {
       var question = message.q && message.q.toString();
-      return question === 'auth';
+      var nounce = message.a && message.a.n && message.a.n.toString() || null;
+      var dnsQ = message.a && message.a.q && message.a.q.toString() || null;
+      return question === 'auth' && nounce !== null && dnsQ !== null;
     }
     return false;
   };
@@ -100,18 +106,25 @@ var DHTNodeAnnouncer = function(dhTable, opts){
     var question = message.a
       && message.a.q
       && message.a.q.toString();
+    var nounce = message.a
+      && message.a.n
+      && message.a.n.toString();
 
     if (announcedDns[question]) {
 
       var privateKey = announcedDns[question].privateKey;
 
       var publicKey = bitauth.getPublicKeyFromPrivateKey(privateKey);
-      var signedData = bitauth.sign(question, privateKey);
+      var sin = bitauth.getSinFromPublicKey(publicKey);
+      var signedData = bitauth.sign(question+nounce, privateKey);
+      debug('');
       debug('got \'auth\' request from %s', addr);
       debug(message);
       debug('privateKey %s', privateKey);
       debug('publicKey / identity %s', publicKey);
+      debug('announced sin %s', sin);
       debug('question %s', question);
+      debug('nounce %s', nounce);
       debug('signedData %s', signedData);
 
       // then send reply
@@ -120,10 +133,12 @@ var DHTNodeAnnouncer = function(dhTable, opts){
         "r":{
           "i": publicKey,
           "s": signedData,
-          "q": question
+          "n": nounce
         }
       };
       dhTable._send(addr, response);
+    } else {
+      debug('not question %s', question)
     }
   };
 
@@ -168,20 +183,21 @@ var DHTNodeResolver = function(dhTable){
             pendingLookup[torrent.infoHash] = {
               question: dnsToSolve
             };
+            debug('');
             debug('lookup %s %s', dnsToSolve, torrent.infoHash);
             dhTable.lookup(torrent.infoHash, function(err, closest){
               debug('err %s', err);
               debug('closest %s', closest);
-
-              closest.forEach(function(message){
-                var name = that.getPendingDNSQuestion(torrent.infoHash);
-                if ( name !== false ){
-                  that.challengePeerAnnouncer(message.addr, torrent.infoHash, name);
-                } else {
-                  debug('skip peer %s %s', message.addr, torrent.infoHash);
-                }
-              })
-
+              if(!err){
+                closest.forEach(function(message){
+                  var name = that.getPendingDNSQuestion(torrent.infoHash);
+                  if ( name !== false ){
+                    that.challengePeerAnnouncer(message.addr, torrent.infoHash, name);
+                  } else {
+                    debug('skip peer %s %s', message.addr, torrent.infoHash);
+                  }
+                })
+              }
             });
           });
       }
@@ -212,23 +228,31 @@ var DHTNodeResolver = function(dhTable){
 
     var pendingChallenges = this.pendingChallenges;
 
+    var nounce = bitauth.generateSin().sin; // just a random string
     var transactionId = dhTable._getTransactionId(addr, function(){});
     var message = {
       "t":transactionIdToBuffer(transactionId),
       "y":"q",
       "q":"auth",
       "a":{
-        "q":question
+        "q":question,
+        "n":nounce
       }
     };
-    pendingChallenges[addr] = message;
 
+    debug('');
     debug('sent \'auth\' request to %s', addr);
     debug(message);
+    debug('transaction id= %s', message.t);
+    debug('transaction question= %s', question);
+    debug('transaction nounce= %s', nounce);
 
     dhTable._send(addr, message);
-    pendingChallenges[addr].question = question;
-    pendingChallenges[addr].infoHash = infoHash;
+    pendingChallenges[nounce] = {};
+    pendingChallenges[nounce].nounce = nounce;
+    pendingChallenges[nounce].question = question;
+    pendingChallenges[nounce].infoHash = infoHash;
+
   };
 
   // check if a response message is an 'auth' request reply
@@ -238,20 +262,19 @@ var DHTNodeResolver = function(dhTable){
 
     var type = message.y && message.y.toString();
     if (type === 'r') {
-      if (pendingChallenges[addr]) {
-        var identity = message.r
-          && message.r.i
-          && message.r.i.toString();
-        var signature = message.r
-          && message.r.s
-          && message.r.s.toString();
-        var question = message.r
-          && message.r.q
-          && message.r.q.toString();
-        return identity !== undefined
-          && signature !== undefined
-          && question !== undefined;
-      }
+      var identity = message.r
+        && message.r.i
+        && message.r.i.toString();
+      var signature = message.r
+        && message.r.s
+        && message.r.s.toString();
+      var nounce = message.r
+        && message.r.n
+        && message.r.n.toString();
+      return identity !== undefined
+        && signature !== undefined
+        && nounce !== undefined
+        && pendingChallenges[nounce];
     }
     return false;
   };
@@ -268,53 +291,55 @@ var DHTNodeResolver = function(dhTable){
     var signature = message.r
       && message.r.s
       && message.r.s.toString();
-    var question = message.r
-      && message.r.q
-      && message.r.q.toString();
+    var nounce = message.r
+      && message.r.n
+      && message.r.n.toString();
 
-    var challengeQuestion = pendingChallenges[addr].question;
+    if(pendingChallenges[nounce]) {
+      var question = pendingChallenges[nounce].question;
 
-    if (challengeQuestion === question){
+      var publicKey = pendingDns[question].publicKey;
+
       // do something to cipher/un cipher the challenge here
 
+      debug('');
       debug('got \'auth\' request reply from %s', addr);
       debug(message);
       debug('question %s', question);
+      debug('nounce %s', nounce);
       debug('identity %s', identity);
+      debug('identity===publicKey %s', (identity===publicKey));
       debug('signature %s', signature);
 
-      bitauth.verifySignature(question, identity, signature, function(err, result) {
+      bitauth.verifySignature((question+nounce), publicKey, signature, function(err, result) {
         if(!err && result) {
           var sin = bitauth.getSinFromPublicKey(identity);
           if(sin) {
             debug('pending Dns publickey %s', pendingDns[question].publicKey);
             debug('sin %s', sin);
-            if(pendingDns[question].publicKey === identity){
-              debug('successful identification %s', addr);
-              return then(null, true);
-            }
+            debug('successful identification %s', addr);
+            return then(null, nounce);
           }
         }
         then(err, false);
       });
-    } else {
-      then(null, false);
+
     }
   };
 
   // resolve pending resolve question and invoke relative callback
-  this.resolveDNSQuestion = function(addr){
+  this.resolveDNSQuestion = function(addr, nounce){
 
     var pendingChallenges = this.pendingChallenges;
     var pendingDns = this.pendingDns;
     var pendingLookup = this.pendingLookup;
     var knownDns = this.knownDns;
 
-    var name = pendingChallenges[addr].question;
-    var infoHash = pendingChallenges[addr].infoHash;
+    var name = pendingChallenges[nounce].question;
+    var infoHash = pendingChallenges[nounce].infoHash;
     var then = pendingDns[name].then;
 
-    delete pendingChallenges[addr];
+    delete pendingChallenges[nounce];
     delete pendingDns[name];
     delete pendingLookup[infoHash];
 
@@ -405,11 +430,11 @@ var DHTSolver = function(opts){
             that.announcer.replyAuthRequest(addr, message);
           } else if (that.resolver.isAuthRequestReply(addr, message) ){
             that.resolver.validateAuthRequestReply(addr, message,
-              function(err, success){
-              if ( success === true ){
-                that.resolver.resolveDNSQuestion(addr);
+              function(err, nounce){
+              if ( nounce === false ){
+                debug('wrong id, pass %s', nounce)
               } else {
-                debug('wrong id, pass')
+                that.resolver.resolveDNSQuestion(addr, nounce);
               }
             });
           }
@@ -461,6 +486,7 @@ var DHTSolver = function(opts){
 };
 
 function decodeMessage(data){
+  var debug = require('debug')('dns-via-dht');
   var message;
   try {
     message = bencode.decode(data);
