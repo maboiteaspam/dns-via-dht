@@ -2,17 +2,7 @@
 
 Provides an API to announce and resolve a domain name via DHT.
 
-It is using bitauth api to implement challenge identification of a peer announcing a domain we d like to resolve.
-
-Announcer attach a passphrase to each announced domains.
-
-Resolver transforms domain name in a torrent key, then starts a lookup.
-
-Resolver will get various peers responding. It will challenge each of them using a public key it has been provided.
-
-Each announcer will use its private key to sign the domain name question, then respond it.
-
-The first peer to resolve correctly the Resolver challenge is trusted and returned as the remote end point.
+It is using bitauth api to identify the right domain owner among many conflicting responses.
 
 # Beware
 
