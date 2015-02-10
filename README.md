@@ -49,7 +49,7 @@ Start a client to resolve the domain announced in the first terminal.
 
 #### Unavailable bootstrap nodes
 
-Something that happens to me, i workaround this by doing a dirty network scan
+Something that happens to me, i workaround this by doing a dirty network scan, [https://github.com/maboiteaspam/bootstrap-dht-yourself](find out more)
 
 ```zsh
 > dns-via-dht resolve 'mydomain.com' 'pubKey' -b 'diy'
