@@ -500,6 +500,7 @@ function decodeMessage(data){
 
   return message;
 };
+
 // took from feross/bittorrent-dht
 function transactionIdToBuffer (transactionId) {
   if (Buffer.isBuffer(transactionId)) {
@@ -509,7 +510,7 @@ function transactionIdToBuffer (transactionId) {
     buf.writeUInt16BE(transactionId, 0)
     return buf
   }
-}
+};
 
 // expose a constructor
 module.exports = DHTSolver;

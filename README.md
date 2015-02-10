@@ -24,9 +24,23 @@ Still a work in progress : )
 npm i maboiteaspam/dns-via-dht -g
 ```
 
+if you don t have sudo, but you need it, fyi, you may do :
+
+```zsh
+mkdir some
+cd some
+npm i maboiteaspam/dns-via-dht
+# node node_modules/.bin/dns-via-dht # you d start it that way
+```
+
 # Run
 
+To run a complete setup with both server and client, please follow those steps.
+
 #### Terminal 1
+
+Start a server that announces a domain.
+
 ```zsh
 > dns-via-dht announce 'mydomain.com' 'passphrase'
 Starting DHT on 127.0.0.1:9091
@@ -37,7 +51,7 @@ Public key 02413xxxxxxxxxx7364c8
 
 #### Terminal 2
 
-Using Terminal 1 Public key.
+Start a client to resolve the domain announced in the first terminal.
 
 ```zsh
 > dns-via-dht resolve 'mydomain.com' '[public-key]'
@@ -149,6 +163,19 @@ It provides methods such start(then), resolve(dns, publicKey, then), announce(dn
     });
 ```
 
+### Identification sequence
+
+1. peer A announce on the DHT as a simple torrent(of url) of the domain a-domain.com.
+    Each announced domains is provided with a private key.
+    In returns it provides a public key that proves it s identity.
+2. peer B realize a lookup(of the torrent.infoHash) on the DHT.
+3. For each peer announcer, peer B will challenge it.
+    Challenge consist of a DNS question and a random string nounce.
+    Challenge sequence is done over UDP without encryption.
+4. peer A, the announcer, receive the challenge, it will sign it using its private key, signedData=sign(question+nounce).
+5. peer B check each response signature provided using it s public key of the DNS question.
+    On first peer correctly checked, peer B resolves the query.
+    If the request can not be resolved within of 5s timeout, it resolves empty
 
 
 # TODO
@@ -158,6 +185,7 @@ It provides methods such start(then), resolve(dns, publicKey, then), announce(dn
 - add continuous testing
 - provide a dns server implementation for quick setup
 - adjust timeout on dns lookup, and known dns
+- check how to responds a sort of 404 DNS not found.
 
 
 ##### to make it better
