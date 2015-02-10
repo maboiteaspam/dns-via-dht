@@ -308,6 +308,7 @@ var DHTNodeResolver = function(dhTable){
       debug('question %s', question);
       debug('nounce %s', nounce);
       debug('identity %s', identity);
+      debug('publicKey %s', publicKey);
       debug('identity===publicKey %s', (identity===publicKey));
       debug('signature %s', signature);
 
