@@ -20,11 +20,11 @@ var DHTNodeAnnouncer = function(dhTable, opts){
     var announcedDns = this.announcedDns;
 
     if (!privateKey) {
-      privateKey = bitauth.generateSin().priv;
-    } else {
       privateKey = (new hashjs.sha256())
-        .update(privateKey /*!!!*\ it is your duty to avoid rainbow table and SALT it */)
+        .update(bitauth.generateSin().priv /*!!!*\ it is your duty to avoid rainbow table and SALT it */)
         .digest('hex');
+    } else {
+      // privateKey = privateKey /*!!!*\ it is your duty to avoid rainbow table and SALT it */;
     }
 
     if (isValidDns(newDns) && !this.isAnnounced(newDns)) {
