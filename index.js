@@ -31,7 +31,7 @@ var DHTNodeAnnouncer = function(dhTable, opts){
       announcedDns[newDns] = {
         ip: '127.0.0.1', // this is for internal resolution
         dns: newDns,
-        privateKey:privateKey
+        privateKey: privateKey
       };
       createTorrent(new Buffer(newDns), {name: newDns},
         function (err, torrent) {
@@ -137,11 +137,12 @@ var DHTNodeAnnouncer = function(dhTable, opts){
         }
       };
       dhTable._send(addr, response);
+      return response;
     } else {
       debug('not question %s', question)
     }
+    return false;
   };
-
 
 };
 
@@ -401,7 +402,7 @@ var DHTSolver = function(opts){
 
 
   // start the DHT and invoke the callback(announcer, resolver)
-  this.start = function(then){
+  this.start = function(then, onAnnounced){
 
     debug('bootstrap=%s', opts.bootstrap);
     debug('K=%s', opts.K);
@@ -426,9 +427,20 @@ var DHTSolver = function(opts){
       dhTable.socket.on('message', function (data, rinfo){
         var message = decodeMessage(data);
         if (message !== false) {
+
           var addr = rinfo.address + ':' + rinfo.port;
+
+          // is the message addressed to announcer
           if (that.announcer.isAuthRequest(addr, message) ){
-            that.announcer.replyAuthRequest(addr, message);
+            var response = that.announcer.replyAuthRequest(addr, message);
+            if(response !== false && onAnnounced){
+              var question = message.a.q;
+              var publicKey = response.a.i;
+              var nounce = response.a.n;
+              onAnnounced(addr, question, publicKey, nounce);
+            }
+
+          // or resolver ?
           } else if (that.resolver.isAuthRequestReply(addr, message) ){
             that.resolver.validateAuthRequestReply(addr, message,
               function(err, nounce){
@@ -439,9 +451,11 @@ var DHTSolver = function(opts){
               }
             });
           }
+          // otherwise, ignore.
         }
       });
 
+      // this is needed when ready event occurs synced because bootstrap=false
       process.nextTick(function(){
         then();
       });
